@@ -22,7 +22,7 @@ export default async function handler(req, res) {
                 "X-Title": "Replaceable.ai Command Centre",
             },
             body: JSON.stringify({
-                model: "deepseek/deepseek-r1:free",
+                model: "google/gemma-2-9b-it:free",
                 max_tokens: 2000,
                 messages: [
                     { role: "system", content: system },
