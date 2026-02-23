@@ -22,8 +22,8 @@ export default async function handler(req, res) {
                 "X-Title": "Replaceable.ai Command Centre",
             },
             body: JSON.stringify({
-                model: "anthropic/claude-3.5-sonnet",
-                max_tokens: 4096,
+                model: "meta-llama/llama-3.3-70b-instruct:free",
+                max_tokens: 2000,
                 messages: [
                     { role: "system", content: system },
                     { role: "user", content: finalPrompt }
