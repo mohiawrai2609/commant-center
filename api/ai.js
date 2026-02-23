@@ -6,9 +6,14 @@ export default async function handler(req, res) {
 
     if (!key) return res.status(401).json({ error: "No API key configured. Add GEMINI_API_KEY to Vercel environment variables." });
 
-    const finalPrompt = search
-        ? `[Today's date: ${new Date().toDateString()}. Use your latest training knowledge to find relevant AI workforce signals.]\n\n${prompt}`
-        : prompt;
+    // Universal Prompt Format: Works on every Gemini version
+    const finalPrompt = `CONTEXT/SYSTEM INSTRUCTIONS:
+${system}
+
+${search ? `TODAY'S DATE: ${new Date().toDateString()}` : ""}
+
+USER REQUEST:
+${prompt}`;
 
     try {
         const r = await fetch(
@@ -17,8 +22,10 @@ export default async function handler(req, res) {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    system_instruction: { parts: [{ text: system }] },
-                    contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
+                    contents: [{
+                        role: "user",
+                        parts: [{ text: finalPrompt }]
+                    }],
                     generationConfig: {
                         maxOutputTokens: 2048,
                         temperature: 0.7,
