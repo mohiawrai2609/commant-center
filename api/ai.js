@@ -22,7 +22,7 @@ export default async function handler(req, res) {
                 "X-Title": "Replaceable.ai Command Centre",
             },
             body: JSON.stringify({
-                model: "meta-llama/llama-3.3-70b-instruct:free",
+                model: "deepseek/deepseek-r1:free",
                 max_tokens: 2000,
                 messages: [
                     { role: "system", content: system },
