@@ -4,44 +4,38 @@ export default async function handler(req, res) {
     const { system, prompt, search = false } = req.body;
     const key = process.env.GEMINI_API_KEY || process.env.OPENROUTER_API_KEY || req.headers["x-api-key"];
 
-    if (!key) return res.status(401).json({ error: "No API key configured. Add GEMINI_API_KEY to Vercel environment variables." });
+    if (!key) return res.status(401).json({ error: "No API key configured." });
 
-    // Universal Prompt Format: Works on every Gemini version
-    const finalPrompt = `CONTEXT/SYSTEM INSTRUCTIONS:
-${system}
-
-${search ? `TODAY'S DATE: ${new Date().toDateString()}` : ""}
-
-USER REQUEST:
-${prompt}`;
-
+    // Using the OpenAI-compatible bridge for Gemini — Much more stable for Free Tier
     try {
         const r = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
             {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${key}`
+                },
                 body: JSON.stringify({
-                    contents: [{
-                        role: "user",
-                        parts: [{ text: finalPrompt }]
-                    }],
-                    generationConfig: {
-                        maxOutputTokens: 2048,
-                        temperature: 0.7,
-                    },
+                    model: "gemini-1.5-flash",
+                    messages: [
+                        { role: "system", content: system },
+                        { role: "user", content: `${search ? `[CURRENT DATE: ${new Date().toDateString()}] ` : ""}${prompt}` }
+                    ],
+                    max_tokens: 2048,
+                    temperature: 0.7
                 }),
             }
         );
 
         if (!r.ok) {
             const e = await r.text();
-            console.error("Gemini API error:", r.status, e);
+            console.error("Gemini/OpenAI API error:", r.status, e);
             return res.status(r.status).json({ error: e });
         }
 
         const d = await r.json();
-        const text = d.candidates?.[0]?.content?.parts?.map(p => p.text).join("") || "";
+        const text = d.choices?.[0]?.message?.content || "";
         return res.json({ text });
 
     } catch (e) {
