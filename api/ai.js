@@ -2,7 +2,8 @@ export default async function handler(req, res) {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
     const { system, prompt, search = false } = req.body;
-    const key = req.headers["x-api-key"] || process.env.OPENROUTER_API_KEY || process.env.ANTHROPIC_API_KEY;
+    // Server env vars take priority — prevents stale browser-stored keys from overriding
+    const key = process.env.OPENROUTER_API_KEY || process.env.ANTHROPIC_API_KEY || req.headers["x-api-key"];
 
     if (!key) return res.status(401).json({ error: "No API key configured." });
 
