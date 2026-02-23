@@ -2,41 +2,42 @@ export default async function handler(req, res) {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
     const { system, prompt, search = false } = req.body;
-    const key = req.headers["x-api-key"] || process.env.ANTHROPIC_API_KEY;
+    const key = req.headers["x-api-key"] || process.env.OPENROUTER_API_KEY || process.env.ANTHROPIC_API_KEY;
 
-    if (!key) return res.status(401).json({ error: "No API key. Set ANTHROPIC_API_KEY in Vercel environment variables." });
+    if (!key) return res.status(401).json({ error: "No API key configured." });
 
-    // Enhance prompt with current date context when search was requested
+    // Inject date context when search/realtime was requested
     const finalPrompt = search
-        ? `[Today is ${new Date().toDateString()}. Use your latest knowledge to answer.]\n\n${prompt}`
+        ? `[Today's date: ${new Date().toDateString()}. Use your latest training knowledge to find relevant signals.]\n\n${prompt}`
         : prompt;
 
     try {
-        const body = {
-            model: "claude-3-5-sonnet-20241022",
-            max_tokens: 4096,
-            system,
-            messages: [{ role: "user", content: finalPrompt }],
-        };
-
-        const r = await fetch("https://api.anthropic.com/v1/messages", {
+        const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "x-api-key": key,
-                "anthropic-version": "2023-06-01",
+                "Authorization": `Bearer ${key}`,
+                "HTTP-Referer": "https://commant-center.vercel.app",
+                "X-Title": "Replaceable.ai Command Centre",
             },
-            body: JSON.stringify(body),
+            body: JSON.stringify({
+                model: "anthropic/claude-3.5-sonnet",
+                max_tokens: 4096,
+                messages: [
+                    { role: "system", content: system },
+                    { role: "user", content: finalPrompt }
+                ],
+            }),
         });
 
         if (!r.ok) {
             const e = await r.text();
-            console.error("Anthropic API error:", r.status, e);
+            console.error("OpenRouter API error:", r.status, e);
             return res.status(r.status).json({ error: e });
         }
 
         const d = await r.json();
-        const text = d.content?.filter((b) => b.type === "text").map((b) => b.text).join("\n") || "";
+        const text = d.choices?.[0]?.message?.content || "";
         return res.json({ text });
     } catch (e) {
         console.error("Handler error:", e.message);
